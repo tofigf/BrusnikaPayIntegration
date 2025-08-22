@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "BrusnikaPayIntegration": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
