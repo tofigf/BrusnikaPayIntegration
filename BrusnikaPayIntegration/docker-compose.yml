@@ -1,1 +1,29 @@
-﻿
+﻿version: '3.8'
+
+services:
+  brusnika-pay-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brusnika-pay-service
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - BrusnikaPay__JwtToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJCdXNpbmVzc0ludGVncmF0aW9uIiwibmJmIjoxNzQzNzIwMTk1LCJleHAiOjE3NzUyNTYxOTUsImlzcyI6Ik5QIiwiYXVkIjoiTlBTZXJ2aWNlcyJ9.U-b0GjRCWcieRJCQN9BKF7C-zdWropPct084cO2x5mk
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft=Warning
+      - Logging__LogLevel__System=Warning
+    volumes:
+      - ./logs:/app/logs:rw
+    networks:
+      - brusnika-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+networks:
+  brusnika-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

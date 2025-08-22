@@ -2,27 +2,37 @@
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-USER $APP_UID
 WORKDIR /app
-
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["BrusnikaPayIntegration/BrusnikaPayIntegration.csproj", "BrusnikaPayIntegration/"]
-RUN dotnet restore "./BrusnikaPayIntegration/BrusnikaPayIntegration.csproj"
+
+# Copy project file and restore dependencies
+COPY ["BrusnikaPayIntegration.csproj", "."]
+RUN dotnet restore "BrusnikaPayIntegration.csproj"
+
+# Copy all source code
 COPY . .
-WORKDIR "/src/BrusnikaPayIntegration"
-RUN dotnet build "./BrusnikaPayIntegration.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "BrusnikaPayIntegration.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./BrusnikaPayIntegration.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "BrusnikaPayIntegration.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Create a non-root user for security
+RUN adduser --disabled-password --gecos '' --shell /bin/bash --home /home/appuser appuser
+USER appuser
+
+# Set environment variables
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+
 ENTRYPOINT ["dotnet", "BrusnikaPayIntegration.dll"]
