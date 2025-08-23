@@ -1,4 +1,5 @@
-﻿using BrusnikaPayIntegration.Models;
+﻿using BrusnikaPayIntegration.Extensions;
+using BrusnikaPayIntegration.Models.Requests;
 using BrusnikaPayIntegration.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -7,15 +8,14 @@ using Microsoft.Extensions.Logging;
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<PaymentService>();
-
+builder.Services.AddBrusnikaPayServices(builder.Configuration);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 var host = builder.Build();
 
-using var scope = host.Services.CreateScope();
-var paymentService = scope.ServiceProvider.GetRequiredService<PaymentService>();
+await using var scope = host.Services.CreateAsyncScope();
+var paymentService = scope.ServiceProvider.GetRequiredService<IPaymentService>();
 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
 try
@@ -45,7 +45,22 @@ try
     {
         logger.LogWarning($"Payment form creation failed: {formResponse?.Result.Message}");
     }
+    var fullRequest = new PaymentFormFullRequest
+    {
+        ClientID = Guid.NewGuid().ToString(),
+        ClientIP = "192.168.1.1",
+        ClientDateCreated = DateTime.UtcNow.AddDays(-30),
+        PaymentMethod = "sbp",
+        IdTransactionMerchant = $"FULL_{DateTime.Now:yyyyMMdd_HHmmss}",
+        Amount = 750.00m
+    };
 
+    var fullResponse = await paymentService.CreatePaymentFormFullAsync(fullRequest);
+    if (fullResponse?.Result.Status == "success" && fullResponse.Data != null)
+    {
+        logger.LogInformation("Payment form full created successfully!");
+        paymentService.DisplayPaymentForm(fullResponse.Data);
+    }
     logger.LogInformation("Service is running. Press Ctrl+C to stop.");
 
     var cancellationToken = new CancellationTokenSource();
